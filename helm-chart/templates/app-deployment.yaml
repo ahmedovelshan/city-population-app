@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: city-populations
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app: city-populations
+  template:
+    metadata:
+      labels:
+        app: city-populations
+    spec:
+      containers:
+        - name: city-populations
+          image: {{ .Values.app.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ES_HOST
+              value: "http://elasticsearch:{{ .Values.elasticsearch.port }}"
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.app.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10

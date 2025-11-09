@@ -1,0 +1,11 @@
+image:
+  repository: ghcr.io/ahmedovelshan/city-population-app
+  tag: latest
+  pullPolicy: Always
+
+elasticsearch:
+  image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+  port: 9200
+  heap: 512m
+
+resources: {}
