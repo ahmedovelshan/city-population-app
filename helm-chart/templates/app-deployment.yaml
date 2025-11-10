@@ -15,6 +15,8 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+
+      # 🔹 Wait until Elasticsearch is healthy
       initContainers:
         - name: wait-for-elasticsearch
           image: curlimages/curl:8.2.1
@@ -23,17 +25,15 @@ spec:
             - -c
             - |
               echo "Waiting for Elasticsearch at ${ELASTICSEARCH_URL}..."
-              until curl -fsSL ${ELASTICSEARCH_URL}/_cluster/health; do
+              until curl -fsSL --insecure "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; do
                 echo 'Elasticsearch not ready yet...'
                 sleep 10
               done
               echo "Elasticsearch is ready!"
           env:
             - name: ELASTICSEARCH_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName }}
-                  key: url
+              value: "http://elasticsearch:9200"
+
       containers:
         - name: {{ .Values.app.name }}
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
@@ -50,22 +50,11 @@ spec:
             {{- toYaml .Values.app.resources | nindent 12 }}
           env:
             - name: ELASTICSEARCH_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName }}
-                  key: url
-            - name: ELASTICSEARCH_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName }}
-                  key: username
-            - name: ELASTICSEARCH_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName }}
-                  key: password
+              value: "http://elasticsearch:9200"
+
           ports:
             - containerPort: {{ .Values.app.port }}
+
           readinessProbe:
             httpGet:
               path: /health
@@ -73,6 +62,7 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
+
           livenessProbe:
             httpGet:
               path: /health
