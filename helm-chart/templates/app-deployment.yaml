@@ -15,6 +15,20 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+      initContainers:
+        - name: wait-for-elasticsearch
+          image: curlimages/curl:8.2.1
+          command:
+            [
+              "sh", "-c",
+              "until curl -sSf ${ELASTICSEARCH_URL}; do echo 'Waiting for Elasticsearch...'; sleep 5; done"
+            ]
+          env:
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.elasticsearch.secretName }}
+                  key: url
       containers:
         - name: {{ .Values.app.name }}
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"

@@ -50,14 +50,15 @@ spec:
             httpGet:
               path: /
               port: {{ .Values.elasticsearch.port }}
-            initialDelaySeconds: 10
-            timeoutSeconds: 5
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
             periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /
               port: {{ .Values.elasticsearch.port }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
