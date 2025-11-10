@@ -15,8 +15,6 @@ app:
       cpu: "250m"
 elasticsearch:
   name: "elasticsearch"
-  clusterName: "city-population-cluster"
-  xpackSecurityEnabled: true
   replicas: 1
   discoveryType: "single-node"
   image:
@@ -25,11 +23,13 @@ elasticsearch:
   port: 9200
   heap: "512m"
   secretName: "elasticsearch-credentials"
-  persistence: true # Set to false to disable PV
-  storageClass: "" # Empty = use cluster default
+  persistence: true
+  storageClass: ""
   storageSize: "10Gi"
-  username: ""
-  password: ""
+  username: "elastic"
+  password: "password"
+  clusterName: "city-population-cluster"
+  xpackSecurityEnabled: false  # Set to false for now to simplify debugging
   resources:
     requests:
       memory: "1Gi"
