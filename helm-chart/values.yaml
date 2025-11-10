@@ -4,7 +4,7 @@ app:
   port: 5000
   image:
     repository: ghcr.io/ahmedovelshan/city-population-app
-    tag: "c189060"
+    tag: "59a0526"
     pullPolicy: IfNotPresent
   resources:
     requests:
@@ -29,7 +29,7 @@ elasticsearch:
   username: "elastic"
   password: "password"
   clusterName: "city-population-cluster"
-  xpackSecurityEnabled: false  # Set to false for now to simplify debugging
+  xpackSecurityEnabled: false # Set to false for now to simplify debugging
   resources:
     requests:
       memory: "1Gi"
