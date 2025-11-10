@@ -16,15 +16,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-            - ALL
       containers:
         - name: elasticsearch
           image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL

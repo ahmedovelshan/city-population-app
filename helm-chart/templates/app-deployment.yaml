@@ -21,6 +21,7 @@ spec:
           imagePullPolicy: {{ .Values.app.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
