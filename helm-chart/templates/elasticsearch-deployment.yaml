@@ -47,19 +47,21 @@ spec:
           ports:
             - containerPort: {{ .Values.elasticsearch.port }}
           readinessProbe:
-            httpGet:
-              # host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
+            exec:
+              command:
+                - sh
+                - -c
+                - "curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/ >/dev/null"
             initialDelaySeconds: 60
             timeoutSeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
-            httpGet:
-              # host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
+            exec:
+              command:
+                - sh
+                - -c
+                - "curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/ >/dev/null"
             initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 5
