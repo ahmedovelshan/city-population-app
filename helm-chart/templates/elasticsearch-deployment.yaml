@@ -19,37 +19,12 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
-      initContainers:
-        - name: configure-sysctl
-          image: busybox
-          command: 
-            - /bin/sh
-          args:
-            - -c
-            - |
-              sysctl -w vm.max_map_count=262144 || true
-              echo "vm.max_map_count=262144" >> /etc/sysctl.conf
-        - name: configure-limits
-          image: busybox
-          command: 
-            - /bin/sh
-          args:
-            - -c
-            - |
-              mkdir -p /etc/security
-              echo "elasticsearch soft nofile 65536" >> /etc/security/limits.conf
-              echo "elasticsearch hard nofile 65536" >> /etc/security/limits.conf
-              echo "elasticsearch soft memlock unlimited" >> /etc/security/limits.conf
-              echo "elasticsearch hard memlock unlimited" >> /etc/security/limits.conf
-          securityContext:
-            privileged: true
-            runAsUser: 0
       containers:
         - name: elasticsearch
           image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false  # Set to false for now for debugging
+            readOnlyRootFilesystem: false
             capabilities:
               drop:
                 - ALL
@@ -61,7 +36,7 @@ spec:
             - name: discovery.type
               value: {{ .Values.elasticsearch.discoveryType | default "single-node" }}
             - name: ES_JAVA_OPTS
-              value: "-Xms{{ .Values.elasticsearch.heap }} -Xmx{{ .Values.elasticsearch.heap }} -Dorg.elasticsearch.distribution.type=docker"
+              value: "-Xms{{ .Values.elasticsearch.heap }} -Xmx{{ .Values.elasticsearch.heap }}"
             - name: ELASTIC_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -77,9 +52,9 @@ spec:
             - name: cluster.name
               value: {{ .Values.elasticsearch.clusterName | default "city-population-cluster" }}
             - name: bootstrap.memory_lock
-              value: "true"
+              value: "false"  # Disable memory locking
             - name: xpack.security.enabled
-              value: {{ .Values.elasticsearch.xpackSecurityEnabled | quote }}
+              value: "false"  # Keep security disabled
           ports:
             - containerPort: {{ .Values.elasticsearch.port }}
               name: http
