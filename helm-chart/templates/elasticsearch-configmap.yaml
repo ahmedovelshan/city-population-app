@@ -9,4 +9,4 @@ data:
     network.host: 0.0.0.0
     http.port: {{ .Values.elasticsearch.port }}
     discovery.type: {{ .Values.elasticsearch.discoveryType | default "single-node" }}
-    xpack.security.enabled: {{ .Values.elasticsearch.xpackSecurityEnabled | quote }}
+    xpack.security.enabled: false
