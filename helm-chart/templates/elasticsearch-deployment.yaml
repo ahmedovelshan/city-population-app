@@ -18,13 +18,12 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
-        fsGroup: 1000
       containers:
         - name: elasticsearch
           image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: {{ if .Values.elasticsearch.persistence }}true{{ else }}false{{ end }}
             capabilities:
               drop:
                 - ALL
@@ -52,26 +51,31 @@ spec:
             - name: cluster.name
               value: {{ .Values.elasticsearch.clusterName | default "city-population-cluster" }}
             - name: bootstrap.memory_lock
-              value: "false"  # Disable memory locking
+              value: "false"
             - name: xpack.security.enabled
               value: "true"
             - name: xpack.security.http.ssl.enabled
-              value: "false"  # Disable SSL for simplicity in development
+              value: "false"
           ports:
             - containerPort: {{ .Values.elasticsearch.port }}
-              name: http
           readinessProbe:
-            httpGet:
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
             initialDelaySeconds: 60
-            timeoutSeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 10
             failureThreshold: 3
           livenessProbe:
-            httpGet:
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
