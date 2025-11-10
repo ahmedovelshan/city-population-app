@@ -35,3 +35,5 @@ elasticsearch:
     limits:
       memory: "1024Mi"
       cpu: "250m"
+namespace:
+  name: city-population-app
