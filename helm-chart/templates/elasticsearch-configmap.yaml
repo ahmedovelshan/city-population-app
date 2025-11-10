@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.elasticsearch.name }}-config
+data:
+  elasticsearch.yml: |
+    cluster.name: {{ .Values.elasticsearch.clusterName | default "city-population-cluster" }}
+    node.name: {{ .Values.elasticsearch.name }}
+    network.host: 0.0.0.0
+    http.port: {{ .Values.elasticsearch.port }}
+    discovery.type: {{ .Values.elasticsearch.discoveryType | default "single-node" }}
+    xpack.security.enabled: {{ .Values.elasticsearch.xpackSecurityEnabled | quote }}
