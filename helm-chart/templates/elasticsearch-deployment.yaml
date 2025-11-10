@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Values.elasticsearch.name | default "elasticsearch" }}
+  name: {{ .Values.elasticsearch.name }}
 spec:
   replicas: {{ .Values.elasticsearch.replicas | default 1 }}
   selector:
     matchLabels:
-      app: {{ .Values.elasticsearch.name | default "elasticsearch" }}
-  serviceName: {{ .Values.elasticsearch.name | default "elasticsearch" }}
+      app: {{ .Values.elasticsearch.name }}
+  serviceName: {{ .Values.elasticsearch.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.elasticsearch.name | default "elasticsearch" }}
+        app: {{ .Values.elasticsearch.name }}
     spec:
       securityContext:
         runAsNonRoot: true
@@ -22,7 +22,9 @@ spec:
             - ALL
       containers:
         - name: elasticsearch
-          image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag | default "latest" }}"
+          image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
+          resources:
+            {{- toYaml .Values.elasticsearch.resources | nindent 12 }}
           env:
             - name: discovery.type
               value: {{ .Values.elasticsearch.discoveryType | default "single-node" }}
@@ -45,7 +47,16 @@ spec:
               path: /
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 10
+            timeoutSeconds: 5
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.elasticsearch.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           securityContext:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
@@ -53,6 +64,7 @@ spec:
           volumeMounts:
             - name: elasticsearch-data
               mountPath: /usr/share/elasticsearch/data
+  {{- if .Values.elasticsearch.persistence }}
   volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
@@ -64,22 +76,5 @@ spec:
         resources:
           requests:
             storage: {{ .Values.elasticsearch.storageSize | default "5Gi" }}
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ .Values.elasticsearch.name | default "elasticsearch" }}-network-policy
-spec:
-  podSelector:
-    matchLabels:
-      app: {{ .Values.elasticsearch.name | default "elasticsearch" }}
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: {{ .Values.elasticsearch.appName | default "my-app" }}
-      ports:
-        - protocol: TCP
-          port: {{ .Values.elasticsearch.port }}
+  {{- end }}
+

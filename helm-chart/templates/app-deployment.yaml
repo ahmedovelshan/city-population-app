@@ -1,67 +1,59 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: city-populations
+  name: {{ .Values.app.name }}
 spec:
   replicas: {{ .Values.app.replicaCount }}
   selector:
     matchLabels:
-      app: city-populations
+      app: {{ .Values.app.name }}
   template:
     metadata:
       labels:
-        app: city-populations
+        app: {{ .Values.app.name }}
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         allowPrivilegeEscalation: false
         capabilities:
-          drop:
-            - ALL
+          drop: [ "ALL" ]
       containers:
-        - name: {{ .Chart.Name }}
-          image: {{ .Values.app.image }}
-          imagePullPolicy: IfNotPresent
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.app.resources | nindent 12 }}
           env:
             - name: ELASTICSEARCH_URL
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-secret
+                  name: {{ .Values.elasticsearch.secretName }}
                   key: url
             - name: ELASTICSEARCH_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-secret
+                  name: {{ .Values.elasticsearch.secretName }}
                   key: username
             - name: ELASTICSEARCH_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-secret
+                  name: {{ .Values.elasticsearch.secretName }}
                   key: password
           ports:
             - containerPort: {{ .Values.app.port }}
           readinessProbe:
             httpGet:
               path: /health
-              port: 5000
-            initialDelaySeconds: 5
+              port: {{ .Values.app.port }}
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
-              port: 5000
+              port: {{ .Values.app.port }}
             initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+            periodSeconds: 15
             failureThreshold: 3
-          
-          securityContext:
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 1000
-          
-
-          
+            timeoutSeconds: 5

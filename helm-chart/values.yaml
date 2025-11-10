@@ -1,14 +1,18 @@
-image:
-  repository: ghcr.io/ahmedovelshan/city-population-app
-  tag: latest
-  pullPolicy: Always
+app:
+  name: city-populations
+  replicaCount: 2
+  port: 5000
+  image:
+    repository: ghcr.io/ahmedovelshan/city-population-app
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
   resources:
     requests:
       memory: "256Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
-      cpu: "200m"
+      memory: "512Mi"
+      cpu: "250m"
 
 elasticsearch:
   name: "elasticsearch"
@@ -19,17 +23,16 @@ elasticsearch:
     tag: "8.15.0"
   port: 9200
   heap: "512m"
-  url: "http://elasticsearch-master:9200"
   secretName: "elasticsearch-credentials"
+  persistence: true             # Set to false to disable PV
+  storageClass: ""              # Empty = use cluster default
   storageSize: "10Gi"
-  storageClass: ""
-  appName: "city-population-app"
+  username: ""
+  password: ""
   resources:
     requests:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
-      cpu: "200m"
-
-resources: {}
+      memory: "1024Mi"
+      cpu: "250m"
