@@ -18,7 +18,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
 
-      # Wait for Elasticsearch to be ready
+      # Init container to wait for Elasticsearch
       initContainers:
         - name: wait-for-elasticsearch
           image: curlimages/curl:8.2.1
