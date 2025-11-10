@@ -23,26 +23,24 @@ COPY app.py .
 # -----------------------------
 FROM python:3.11-slim
 
-# Set environment variables
+# Environment settings
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_ENV=production \
-    PATH=/root/.local/bin:$PATH \
+    PATH=/home/appuser/.local/bin:$PATH \
     PORT=5000
 
 WORKDIR /app
 
-# Copy only installed dependencies from builder stage
-COPY --from=builder /root/.local /root/.local
-
-# Copy app code
+# Copy dependencies and code from builder
+COPY --from=builder /root/.local /home/appuser/.local
 COPY --from=builder /app /app
 
 # Add non-root user
 RUN useradd --create-home --shell /bin/bash appuser
 USER appuser
 
-# Expose port
+# Expose Flask port
 EXPOSE $PORT
 
 # Start the Flask app
