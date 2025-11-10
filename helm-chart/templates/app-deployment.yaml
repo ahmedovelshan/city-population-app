@@ -19,10 +19,15 @@ spec:
         - name: wait-for-elasticsearch
           image: curlimages/curl:8.2.1
           command:
-            [
-              "sh", "-c",
-              "until curl -sSf ${ELASTICSEARCH_URL}; do echo 'Waiting for Elasticsearch...'; sleep 5; done"
-            ]
+            - sh
+            - -c
+            - |
+              echo "Waiting for Elasticsearch at ${ELASTICSEARCH_URL}..."
+              until curl -fsSL ${ELASTICSEARCH_URL}/_cluster/health; do
+                echo 'Elasticsearch not ready yet...'
+                sleep 10
+              done
+              echo "Elasticsearch is ready!"
           env:
             - name: ELASTICSEARCH_URL
               valueFrom:

@@ -54,7 +54,9 @@ spec:
             - name: bootstrap.memory_lock
               value: "false"  # Disable memory locking
             - name: xpack.security.enabled
-              value: "false"  # Keep security disabled
+              value: "true"
+            - name: xpack.security.http.ssl.enabled
+              value: "false"  # Disable SSL for simplicity in development
           ports:
             - containerPort: {{ .Values.elasticsearch.port }}
               name: http
