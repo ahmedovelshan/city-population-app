@@ -23,6 +23,13 @@ spec:
       containers:
         - name: elasticsearch
           image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
           resources:
             {{- toYaml .Values.elasticsearch.resources | nindent 12 }}
           env:
@@ -76,5 +83,9 @@ spec:
         resources:
           requests:
             storage: {{ .Values.elasticsearch.storageSize | default "5Gi" }}
+  {{- else }}
+  volumes:
+    - name: elasticsearch-data
+      emptyDir: {}
   {{- end }}
 
