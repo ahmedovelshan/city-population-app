@@ -52,7 +52,7 @@ spec:
                 - sh
                 - -c
                 - "curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/ >/dev/null"
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             timeoutSeconds: 10
             periodSeconds: 10
             failureThreshold: 3
@@ -62,7 +62,7 @@ spec:
                 - sh
                 - -c
                 - "curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/ >/dev/null"
-            initialDelaySeconds: 120
+            initialDelaySeconds: 180
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
