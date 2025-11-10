@@ -48,7 +48,7 @@ spec:
             - containerPort: {{ .Values.elasticsearch.port }}
           readinessProbe:
             httpGet:
-              path: /
+              host: {{ .Values.elasticsearch.name }}
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 60
             timeoutSeconds: 10
@@ -56,7 +56,7 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /
+              host: {{ .Values.elasticsearch.name }}
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 120
             periodSeconds: 10
