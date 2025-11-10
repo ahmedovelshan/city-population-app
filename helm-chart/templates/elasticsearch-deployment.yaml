@@ -61,13 +61,15 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-          securityContext:
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 1000
           volumeMounts:
             - name: elasticsearch-data
               mountPath: /usr/share/elasticsearch/data
+      {{- if not .Values.elasticsearch.persistence }}
+      volumes:
+        - name: elasticsearch-data
+          emptyDir: {}
+      {{- end }}
+
   {{- if .Values.elasticsearch.persistence }}
   volumeClaimTemplates:
     - metadata:
@@ -80,9 +82,4 @@ spec:
         resources:
           requests:
             storage: {{ .Values.elasticsearch.storageSize | default "5Gi" }}
-  {{- else }}
-  volumes:
-    - name: elasticsearch-data
-      emptyDir: {}
   {{- end }}
-
