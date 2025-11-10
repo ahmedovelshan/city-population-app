@@ -4,7 +4,7 @@ app:
   port: 5000
   image:
     repository: ghcr.io/ahmedovelshan/city-population-app
-    tag: "0a20412"
+    tag: "13616db"
     pullPolicy: IfNotPresent
   resources:
     requests:
