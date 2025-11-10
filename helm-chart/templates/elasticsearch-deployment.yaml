@@ -49,7 +49,7 @@ spec:
           readinessProbe:
             httpGet:
               # host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
-              path: /
+              path: /_cluster/health
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 60
             timeoutSeconds: 10
@@ -58,7 +58,7 @@ spec:
           livenessProbe:
             httpGet:
               # host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
-              path: /
+              path: /_cluster/health
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 120
             periodSeconds: 10
