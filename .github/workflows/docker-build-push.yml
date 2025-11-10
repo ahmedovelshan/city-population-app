@@ -5,42 +5,57 @@ on:
     paths:
       - "app/**"
       - "helm-chart/values.yaml"
+      - "Dockerfile"
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
+      # 1️⃣ Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Set Git SHA as image tag
       - name: Set image tag from Git SHA
         id: vars
         run: echo "IMAGE_TAG=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
 
-      - name: Log in to GitHub Container Registry
+      # 3️⃣ Log in to GitHub Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: |
-          IMAGE_NAME=ghcr.io/ahmedovelshan/city-population-app
-          docker build -t $IMAGE_NAME:${{ env.IMAGE_TAG }} -t $IMAGE_NAME:latest ./app
+      # 4️⃣ Build and push Docker image (with caching)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./app
+          push: true
+          tags: |
+            ghcr.io/ahmedovelshan/city-population-app:${{ env.IMAGE_TAG }}
+            ghcr.io/ahmedovelshan/city-population-app:latest
+          cache-from: type=registry,ref=ghcr.io/ahmedovelshan/city-population-app:cache
+          cache-to: type=registry,ref=ghcr.io/ahmedovelshan/city-population-app:cache,mode=max
 
-      - name: Push Docker image
-        run: |
-          IMAGE_NAME=ghcr.io/ahmedovelshan/city-population-app
-          docker push $IMAGE_NAME:${{ env.IMAGE_TAG }}
-          docker push $IMAGE_NAME:latest
-
-      - name: Update values.yaml with new tag
+      # 5️⃣ Update Helm values.yaml with new tag
+      - name: Update values.yaml with new image tag
         run: |
           TAG=${{ env.IMAGE_TAG }}
           yq e -i ".app.image.tag = \"$TAG\"" helm-chart/values.yaml
+
+      # 6️⃣ Commit updated values.yaml back to repo
+      - name: Commit and push updated values.yaml
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add helm-chart/values.yaml
+          git commit -m "Update app image tag to $TAG"
+          git push
