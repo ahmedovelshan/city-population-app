@@ -1,11 +1,25 @@
 from flask import Flask, request, jsonify
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, ConnectionError
 import os
+import time
 
 app = Flask(__name__)
 
-ES_HOST = os.environ.get('ES_HOST', 'http://localhost:9200')
-es = Elasticsearch(ES_HOST)
+# Use the same env variable as in Deployment
+ES_HOST = os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
+
+# Retry connecting to Elasticsearch
+for i in range(30):
+    try:
+        es = Elasticsearch(ES_HOST)
+        if es.ping():
+            print("Connected to Elasticsearch!")
+            break
+    except ConnectionError:
+        print("Elasticsearch not ready, retrying...")
+        time.sleep(5)
+else:
+    raise Exception("Elasticsearch not available after 30 retries")
 
 INDEX_NAME = "cities"
 
@@ -41,4 +55,3 @@ def get_city(city_name):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-#test
