@@ -21,7 +21,7 @@ spec:
           image: "{{ .Values.elasticsearch.image.repository }}:{{ .Values.elasticsearch.image.tag }}"
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: {{ if .Values.elasticsearch.persistence }}true{{ else }}false{{ end }}
             capabilities:
               drop:
                 - ALL
