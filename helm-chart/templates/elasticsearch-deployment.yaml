@@ -36,16 +36,6 @@ spec:
               value: {{ .Values.elasticsearch.discoveryType | default "single-node" }}
             - name: ES_JAVA_OPTS
               value: "-Xms{{ .Values.elasticsearch.heap }} -Xmx{{ .Values.elasticsearch.heap }}"
-            - name: ELASTIC_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName | default "elasticsearch-credentials" }}
-                  key: username
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.elasticsearch.secretName | default "elasticsearch-credentials" }}
-                  key: password
             - name: node.name
               value: {{ .Values.elasticsearch.name }}
             - name: cluster.name
@@ -53,29 +43,23 @@ spec:
             - name: bootstrap.memory_lock
               value: "false"
             - name: xpack.security.enabled
-              value: "true"
+              value: "false"
             - name: xpack.security.http.ssl.enabled
               value: "false"
           ports:
             - containerPort: {{ .Values.elasticsearch.port }}
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - |
-                  curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
+            httpGet:
+              path: /_cluster/health
+              port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 3
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - |
-                  curl -fsSL -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
+            httpGet:
+              path: /_cluster/health
+              port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
