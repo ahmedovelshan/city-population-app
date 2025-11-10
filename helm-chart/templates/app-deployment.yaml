@@ -12,18 +12,56 @@ spec:
       labels:
         app: city-populations
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
       containers:
-        - name: city-populations
+        - name: {{ .Chart.Name }}
           image: {{ .Values.app.image }}
           imagePullPolicy: IfNotPresent
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           env:
-            - name: ES_HOST
-              value: "http://elasticsearch:{{ .Values.elasticsearch.port }}"
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: url
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: username
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secret
+                  key: password
           ports:
             - containerPort: {{ .Values.app.port }}
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.app.port }}
+              port: 5000
             initialDelaySeconds: 5
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          
+
+          

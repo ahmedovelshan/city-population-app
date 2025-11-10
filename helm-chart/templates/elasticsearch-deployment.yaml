@@ -12,6 +12,13 @@ spec:
       labels:
         app: elasticsearch
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
       containers:
         - name: elasticsearch
           image: {{ .Values.elasticsearch.image }}
@@ -28,3 +35,7 @@ spec:
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000

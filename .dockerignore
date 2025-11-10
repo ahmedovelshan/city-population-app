@@ -1,0 +1,11 @@
+.git
+.gitignore
+README.md
+Dockerfile
+charts/
+.env
+*.pyc
+__pycache__/
+*.log
+.idea
+.vscode
