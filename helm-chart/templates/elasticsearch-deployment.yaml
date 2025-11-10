@@ -48,7 +48,7 @@ spec:
             - containerPort: {{ .Values.elasticsearch.port }}
           readinessProbe:
             httpGet:
-              host: {{ .Values.elasticsearch.name }}
+              host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 60
             timeoutSeconds: 10
@@ -56,7 +56,7 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              host: {{ .Values.elasticsearch.name }}
+              host: {{ printf "%s.%s.svc.cluster.local" .Values.elasticsearch.name .Release.Namespace }}
               port: {{ .Values.elasticsearch.port }}
             initialDelaySeconds: 120
             periodSeconds: 10
