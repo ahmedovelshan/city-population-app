@@ -29,9 +29,6 @@ spec:
             - |
               sysctl -w vm.max_map_count=262144 || true
               echo "vm.max_map_count=262144" >> /etc/sysctl.conf
-          securityContext:
-            privileged: true
-            runAsUser: 0
         - name: configure-limits
           image: busybox
           command: 
