@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 # Use the same env variable as in Deployment
 ES_HOST = os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
+es = Elasticsearch(ES_HOST)
 
 # Retry connecting to Elasticsearch
 for i in range(30):
