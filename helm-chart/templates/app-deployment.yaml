@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.app.name }}
+  name: city-populations
   labels:
-    app: {{ .Values.app.name }}
+    app: city-populations
 spec:
-  replicas: {{ .Values.app.replicaCount }}
+  replicas: 2
   selector:
     matchLabels:
-      app: {{ .Values.app.name }}
+      app: city-populations
   template:
     metadata:
       labels:
-        app: {{ .Values.app.name }}
+        app: city-populations
     spec:
       securityContext:
         runAsNonRoot: true
@@ -27,19 +27,24 @@ spec:
             - -c
             - |
               echo "Waiting for Elasticsearch at ${ELASTICSEARCH_URL}..."
-              until curl -fsSL --insecure "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; do
-                echo 'Elasticsearch not ready yet...'
-                sleep 10
+              for i in $(seq 1 30); do
+                if curl -fsSL "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; then
+                  echo "Elasticsearch is ready!"
+                  exit 0
+                fi
+                echo "Elasticsearch not ready yet... retry $i"
+                sleep 5
               done
-              echo "Elasticsearch is ready!"
+              echo "Elasticsearch did not become ready in time"
+              exit 1
           env:
             - name: ELASTICSEARCH_URL
               value: "http://elasticsearch:9200"
 
       containers:
-        - name: {{ .Values.app.name }}
-          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
-          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+        - name: city-populations
+          image: ghcr.io/ahmedovelshan/city-population-app:59febc9
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -48,25 +53,30 @@ spec:
                 - ALL
             runAsNonRoot: true
             runAsUser: 1000
-          resources:
-            {{- toYaml .Values.app.resources | nindent 12 }}
           env:
             - name: ELASTICSEARCH_URL
               value: "http://elasticsearch:9200"
           ports:
-            - containerPort: {{ .Values.app.port }}
+            - containerPort: 5000
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.app.port }}
+              port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.app.port }}
+              port: 5000
             initialDelaySeconds: 30
             periodSeconds: 15
             failureThreshold: 3
             timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
