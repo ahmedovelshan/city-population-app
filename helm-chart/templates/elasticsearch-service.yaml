@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: elasticsearch
 spec:
+  clusterIP: None
   selector:
     app: elasticsearch
   ports:

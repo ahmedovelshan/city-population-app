@@ -1,20 +1,29 @@
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ .Values.elasticsearch.name | default "elasticsearch" }}-network-policy
+  name: {{ .Values.elasticsearch.name }}-network-policy
+  labels:
+    app: {{ .Values.elasticsearch.name }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ .Values.elasticsearch.name | default "elasticsearch" }}
+      app: {{ .Values.elasticsearch.name }}
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: {{ .Values.app.name  }}
+              app: {{ .Values.app.name }}
       ports:
         - protocol: TCP
           port: {{ .Values.elasticsearch.port }}
-
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.app.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.app.port }}
