@@ -61,7 +61,7 @@ spec:
               port: {{ .Values.elasticsearch.port }}
               httpHeaders:
                 - name: Authorization
-                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password | b64encode }}"
+                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password }}"
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 10
@@ -73,7 +73,7 @@ spec:
               port: {{ .Values.elasticsearch.port }}
               httpHeaders:
                 - name: Authorization
-                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password | b64encode }}"
+                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password }}"
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
