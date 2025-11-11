@@ -3,7 +3,7 @@
 # ==========================================
 app:
   name: city-populations
-  replicaCount: 2
+  replicaCount: 1
   port: 5000
   image:
     repository: ghcr.io/ahmedovelshan/city-population-app
