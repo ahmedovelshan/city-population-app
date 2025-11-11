@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from elasticsearch import Elasticsearch
 import os
-import time
 
 app = Flask(__name__)
 
@@ -10,25 +9,16 @@ ES_HOST = os.environ.get("ELASTICSEARCH_URL", "http://elasticsearch:9200")
 ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic")
 ES_PASS = os.environ.get("ELASTICSEARCH_PASSWORD", "password")
 
-# Retry connecting to Elasticsearch
-for i in range(30):
-    try:
-        es = Elasticsearch(
-            ES_HOST,
-            basic_auth=(ES_USER, ES_PASS)
-        )
-        if es.ping():
-            print("Connected to Elasticsearch!")
-            break
-    except Exception as e:
-        print(f"Elasticsearch not ready ({i+1}/30): {e}")
-        time.sleep(5)
+# Connect to Elasticsearch
+es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
+if es.ping():
+    print("Connected to Elasticsearch!")
 else:
-    raise Exception("Elasticsearch not available after 30 retries")
+    print("Warning: Elasticsearch not reachable at startup. Init container should have waited for it.")
 
 INDEX_NAME = "cities"
 
-# Create index safely if it doesn't exist
+# Create index if it doesn't exist
 try:
     if not es.indices.exists(index=INDEX_NAME):
         es.indices.create(index=INDEX_NAME)
@@ -41,7 +31,7 @@ except Exception as e:
 def health_check():
     return "OK", 200
 
-# Upsert city (insert or update)
+# Upsert city
 @app.route("/city", methods=["POST"])
 def upsert_city():
     data = request.get_json()
