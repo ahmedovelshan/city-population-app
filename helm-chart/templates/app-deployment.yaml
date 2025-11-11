@@ -33,7 +33,7 @@ spec:
                   exit 0
                 fi
                 echo "Elasticsearch not ready yet... retry $i"
-                sleep 5
+                sleep 10
               done
               echo "Elasticsearch did not become ready in time"
               exit 1
