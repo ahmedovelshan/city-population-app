@@ -1,4 +1,8 @@
+{{- if ne .Values.namespace.name "default" }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.namespace.name }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+{{- end }}
