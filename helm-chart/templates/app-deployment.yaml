@@ -28,7 +28,7 @@ spec:
             - |
               echo "Waiting for Elasticsearch at ${ELASTICSEARCH_URL}..."
               for i in $(seq 1 25); do
-                if curl -fsSL "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; then
+                if curl -u $ELASTICSEARCH_USERNAME:$ELASTICSEARCH_PASSWORD -fsSL "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; then
                   echo "Elasticsearch is ready!"
                   exit 0
                 fi
@@ -43,6 +43,16 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.elasticsearch.secretName }}
                   key: url
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.elasticsearch.secretName }}
+                  key: username
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.elasticsearch.secretName }}
+                  key: password
 
       containers:
         - name: {{ .Values.app.name }}
@@ -72,10 +82,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.elasticsearch.secretName }}
                   key: password
-
           ports:
             - containerPort: {{ .Values.app.port }}
-
           readinessProbe:
             httpGet:
               path: /health
@@ -83,7 +91,6 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
-
           livenessProbe:
             httpGet:
               path: /health
@@ -92,6 +99,5 @@ spec:
             periodSeconds: 15
             failureThreshold: 3
             timeoutSeconds: 5
-
           resources:
             {{- toYaml .Values.app.resources | nindent 12 }}
