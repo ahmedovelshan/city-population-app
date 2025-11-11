@@ -13,32 +13,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Install dependencies globally in builder
+RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py .
 
 # -----------------------------
-# Stage 2: Final runtime stage
+# Stage 2: Runtime stage
 # -----------------------------
 FROM python:3.11-slim
+
+# Add non-root user
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+
+WORKDIR /app
 
 # Environment settings
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_ENV=production \
     PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONPATH=/app/.local/lib/python3.11/site-packages:$PYTHONPATH \
     PORT=5000
 
-WORKDIR /app
-
-# Copy dependencies and code from builder
-COPY --from=builder /root/.local /home/appuser/.local
+# Copy dependencies from builder
+COPY --from=builder /install /home/appuser/.local
+# Copy app code
 COPY --from=builder /app /app
-
-# Add non-root user
-RUN useradd --create-home --shell /bin/bash appuser
-USER appuser
 
 # Expose Flask port
 EXPOSE $PORT
