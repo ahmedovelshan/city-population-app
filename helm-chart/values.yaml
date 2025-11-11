@@ -30,13 +30,17 @@ elasticsearch:
   heap: "512m"
   # Secret name used by the app and ES
   secretName: "elasticsearch-credentials"
+
   # Persistence (PVC)
-  persistence: true
-  storageClass: "" # leave empty to use default StorageClass
-  storageSize: "10Gi"
+  persistence:
+    enabled: false
+    storageClass: "" # leave empty to use default StorageClass
+    size: 10Gi
+
   # Basic credentials (only for dev/testing)
   username: "elastic"
   password: "password"
+
   # Cluster settings
   clusterName: "city-population-cluster"
   resources:
@@ -46,6 +50,7 @@ elasticsearch:
     limits:
       memory: "2Gi"
       cpu: "1"
+
 # ==========================================
 # NAMESPACE
 # ==========================================
