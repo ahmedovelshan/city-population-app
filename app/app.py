@@ -10,19 +10,33 @@ ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic")
 ES_PASS = os.environ.get("ELASTICSEARCH_PASSWORD", "password")
 
 # Connect to Elasticsearch
-es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
-if es.ping():
-    print("Connected to Elasticsearch!")
-else:
-    print("Warning: Elasticsearch not reachable at startup. Init container should have waited for it.")
+es = Elasticsearch(
+    ES_HOST,
+    basic_auth=(ES_USER, ES_PASS)
+)
+
+if not es.ping():
+    raise Exception("Elasticsearch not reachable at startup")
 
 INDEX_NAME = "cities"
 
-# Create index if it doesn't exist
+# Pre-populated cities data
+prepopulated_cities = [
+    {"city": "Baku", "population": 2200000},
+    {"city": "London", "population": 9000000},
+    {"city": "New York", "population": 8500000},
+    {"city": "Paris", "population": 2100000}
+]
+
+# Create index if it doesn't exist and insert pre-populated data
 try:
     if not es.indices.exists(index=INDEX_NAME):
         es.indices.create(index=INDEX_NAME)
-        print(f"Index '{INDEX_NAME}' created.")
+        for city in prepopulated_cities:
+            es.index(index=INDEX_NAME, id=city["city"].lower(), body=city)
+        print(f"Index '{INDEX_NAME}' created with pre-populated data.")
+    else:
+        print(f"Index '{INDEX_NAME}' already exists.")
 except Exception as e:
     print(f"Could not create index '{INDEX_NAME}': {e}")
 
@@ -31,7 +45,7 @@ except Exception as e:
 def health_check():
     return "OK", 200
 
-# Upsert city
+# Upsert city (insert or update)
 @app.route("/city", methods=["POST"])
 def upsert_city():
     data = request.get_json()
