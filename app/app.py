@@ -26,17 +26,20 @@ prepopulated_cities = [
     {"city": "Paris", "population": 2100000}
 ]
 
-# Create index if it doesn't exist and insert pre-populated data
 try:
     if not es.indices.exists(index=INDEX_NAME):
         es.indices.create(index=INDEX_NAME)
-        for city in prepopulated_cities:
-            es.index(index=INDEX_NAME, id=city["city"].lower(), body=city)
-        print(f"Index '{INDEX_NAME}' created with pre-populated data.")
+        print(f"Index '{INDEX_NAME}' created.")
     else:
         print(f"Index '{INDEX_NAME}' already exists.")
+
+    # Insert pre-populated data safely
+    for city in prepopulated_cities:
+        es.index(index=INDEX_NAME, id=city["city"].lower(), document=city)
+    print("Pre-populated cities inserted successfully.")
+
 except Exception as e:
-    print(f"Could not create index '{INDEX_NAME}': {e}")
+    print(f"Could not create index or insert data: {e}")
 
 # Health check endpoint
 @app.route("/health", methods=["GET"])
