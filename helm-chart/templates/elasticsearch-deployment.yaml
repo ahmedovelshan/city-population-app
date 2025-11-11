@@ -56,24 +56,22 @@ spec:
               name: http
 
           readinessProbe:
-            httpGet:
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
-              httpHeaders:
-                - name: Authorization
-                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password }}"
-            initialDelaySeconds: 60
+            exec:
+              command:
+                - sh
+                - -c
+                - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
+            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 3
 
           livenessProbe:
-            httpGet:
-              path: /_cluster/health
-              port: {{ .Values.elasticsearch.port }}
-              httpHeaders:
-                - name: Authorization
-                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password }}"
+            exec:
+              command:
+                - sh
+                - -c
+                - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
