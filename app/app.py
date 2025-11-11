@@ -4,95 +4,90 @@ import os
 import time
 import logging
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 # Config
 ES_HOST = os.environ.get("ELASTICSEARCH_URL", "http://elasticsearch:9200")
-ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic") 
+ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic")
 ES_PASS = os.environ.get("ELASTICSEARCH_PASSWORD", "password")
 INDEX_NAME = "cities"
 
-# Elasticsearch client with connection pooling
+# Elasticsearch client - FIX: Remove HEAD requests by using simple HTTP check
 es = Elasticsearch(
     ES_HOST,
     basic_auth=(ES_USER, ES_PASS),
-    request_timeout=30,
-    max_retries=3,
-    retry_on_timeout=True,
-    verify_certs=False
+    verify_certs=False,
+    ssl_show_warn=False
 )
 
-# Wait for Elasticsearch to be ready
 def wait_for_elasticsearch():
     for i in range(30):
         try:
-            if es.ping():
-                logger.info("Connected to Elasticsearch")
-                return True
-        except:
-            pass
-        logger.info(f"Waiting for Elasticsearch... ({i+1}/30)")
-        time.sleep(2)
+            # FIX: Use proper API call instead of ping() which sends HEAD requests
+            es.info()
+            logger.info("Connected to Elasticsearch")
+            return True
+        except exceptions.AuthenticationException as e:
+            logger.error(f"Authentication failed: {e}")
+            return False
+        except exceptions.ConnectionError as e:
+            logger.info(f"Waiting for Elasticsearch... ({i+1}/30) - {e}")
+            time.sleep(2)
+        except Exception as e:
+            logger.warning(f"Elasticsearch not ready: {e}")
+            time.sleep(2)
     logger.error("Failed to connect to Elasticsearch")
     return False
 
-# Initialize data
 def init_data():
-    if not es.indices.exists(index=INDEX_NAME):
-        es.indices.create(
-            index=INDEX_NAME,
-            body={
-                "mappings": {
-                    "properties": {
-                        "city": {"type": "keyword"},
-                        "population": {"type": "long"}
-                    }
-                }
-            }
-        )
-        logger.info(f"Created index: {INDEX_NAME}")
+    try:
+        if not es.indices.exists(index=INDEX_NAME):
+            es.indices.create(index=INDEX_NAME)
+            logger.info(f"Created index: {INDEX_NAME}")
 
-    cities = [
-        {"city": "Baku", "population": 2200000},
-        {"city": "London", "population": 9000000},
-        {"city": "New York", "population": 8500000},
-        {"city": "Paris", "population": 2100000}
-    ]
-    
-    for city in cities:
-        es.index(
-            index=INDEX_NAME,
-            id=city["city"].lower(),
-            document=city,
-            op_type="create",
-            refresh=True
-        )
-    logger.info("Initial data loaded")
+        cities = [
+            {"city": "Baku", "population": 2200000},
+            {"city": "London", "population": 9000000},
+            {"city": "New York", "population": 8500000},
+            {"city": "Paris", "population": 2100000}
+        ]
+        
+        for city in cities:
+            es.index(
+                index=INDEX_NAME,
+                id=city["city"].lower(),
+                document=city,
+                refresh=True
+            )
+        logger.info("Initial data loaded")
+    except Exception as e:
+        logger.error(f"Data init failed: {e}")
 
 # Initialize
 if wait_for_elasticsearch():
     init_data()
 
-# Routes
 @app.route("/health")
 def health():
-    status = 200 if es.ping() else 503
-    return jsonify({"status": "ok" if status == 200 else "unhealthy"}), status
+    try:
+        es.info()
+        return jsonify({"status": "healthy", "database": "connected"}), 200
+    except:
+        return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
 
 @app.route("/city", methods=["POST"])
 def upsert_city():
-    data = request.get_json()
-    city = data.get("city")
-    population = data.get("population")
-    
-    if not city or population is None:
-        return jsonify({"error": "city and population required"}), 400
-    
     try:
+        data = request.get_json()
+        city = data.get("city")
+        population = data.get("population")
+        
+        if not city or population is None:
+            return jsonify({"error": "city and population required"}), 400
+        
         es.index(
             index=INDEX_NAME,
             id=city.lower(),
