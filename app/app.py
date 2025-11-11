@@ -5,17 +5,22 @@ import time
 
 app = Flask(__name__)
 
-# Use the same env variable as in Deployment
-ES_HOST = os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
+# Environment variables from Kubernetes Secret
+ES_HOST = os.environ.get("ELASTICSEARCH_URL", "http://elasticsearch:9200")
+ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic")
+ES_PASS = os.environ.get("ELASTICSEARCH_PASSWORD", "password")
 
 # Retry connecting to Elasticsearch
 for i in range(30):
     try:
-        es = Elasticsearch(ES_HOST)
+        es = Elasticsearch(
+            ES_HOST,
+            basic_auth=(ES_USER, ES_PASS)
+        )
         if es.ping():
             print("Connected to Elasticsearch!")
             break
-    except Exception as e:  # Catch all connection errors
+    except Exception as e:
         print(f"Elasticsearch not ready ({i+1}/30): {e}")
         time.sleep(5)
 else:
@@ -23,13 +28,17 @@ else:
 
 INDEX_NAME = "cities"
 
-# Create index if it doesn't exist
-if not es.indices.exists(index=INDEX_NAME):
-    es.indices.create(index=INDEX_NAME)
+# Create index safely if it doesn't exist
+try:
+    if not es.indices.exists(index=INDEX_NAME):
+        es.indices.create(index=INDEX_NAME)
+        print(f"Index '{INDEX_NAME}' created.")
+except Exception as e:
+    print(f"Could not create index '{INDEX_NAME}': {e}")
 
 # Health check endpoint
 @app.route("/health", methods=["GET"])
-def health_check(): 
+def health_check():
     return "OK", 200
 
 # Upsert city (insert or update)
@@ -42,16 +51,22 @@ def upsert_city():
     if not city or population is None:
         return jsonify({"error": "city and population required"}), 400
 
-    es.index(index=INDEX_NAME, id=city.lower(), body={"city": city, "population": population})
-    return jsonify({"message": f"{city} added/updated successfully"}), 200
+    try:
+        es.index(index=INDEX_NAME, id=city.lower(), body={"city": city, "population": population})
+        return jsonify({"message": f"{city} added/updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to add/update city: {e}"}), 500
 
 # Query city population
 @app.route("/city/<city_name>", methods=["GET"])
 def get_city(city_name):
-    res = es.get(index=INDEX_NAME, id=city_name.lower(), ignore=[404])
-    if not res.get("found"):
-        return jsonify({"error": "City not found"}), 404
-    return jsonify(res["_source"]), 200
+    try:
+        res = es.get(index=INDEX_NAME, id=city_name.lower(), ignore=[404])
+        if not res.get("found"):
+            return jsonify({"error": "City not found"}), 404
+        return jsonify(res["_source"]), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve city: {e}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
