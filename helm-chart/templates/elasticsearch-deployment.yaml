@@ -59,6 +59,9 @@ spec:
             httpGet:
               path: /_cluster/health
               port: {{ .Values.elasticsearch.port }}
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password | b64encode }}"
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 10
@@ -68,6 +71,9 @@ spec:
             httpGet:
               path: /_cluster/health
               port: {{ .Values.elasticsearch.port }}
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ .Values.elasticsearch.username }}:{{ .Values.elasticsearch.password | b64encode }}"
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
