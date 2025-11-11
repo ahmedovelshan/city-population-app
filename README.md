@@ -58,7 +58,6 @@ GitHub Actions automatically builds and pushes the Docker image to GHCR whenever
 
 ```
 app/**
-Dockerfile
 ```
 
 ---
