@@ -107,16 +107,16 @@ spec:
           emptyDir: {}
       {{- end }}
 
-  {{- if .Values.elasticsearch.persistence }}
+  {{if .Values.elasticsearch.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
       spec:
         accessModes: ["ReadWriteOnce"]
-        {{- if .Values.elasticsearch.storageClass }}
-        storageClassName: {{ .Values.elasticsearch.storageClass }}
+        {{- if .Values.elasticsearch.persistence.storageClass }}
+        storageClassName: {{ .Values.elasticsearch.persistence.storageClass }}
         {{- end }}
         resources:
           requests:
-            storage: {{ .Values.elasticsearch.storageSize | default "10Gi" }}
+            storage: {{ .Values.elasticsearch.persistence.size | default "10Gi" }}
   {{- end }}
