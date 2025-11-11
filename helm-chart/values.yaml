@@ -7,9 +7,8 @@ app:
   port: 5000
   image:
     repository: ghcr.io/ahmedovelshan/city-population-app
-    tag: "c94b63a"           # or your latest image tag
+    tag: "4cacfcc" # or your latest image tag
     pullPolicy: IfNotPresent
-
   resources:
     requests:
       memory: "256Mi"
@@ -17,7 +16,6 @@ app:
     limits:
       memory: "512Mi"
       cpu: "250m"
-
 # ==========================================
 # ELASTICSEARCH CONFIGURATION
 # ==========================================
@@ -25,29 +23,22 @@ elasticsearch:
   name: "elasticsearch"
   replicas: 1
   discoveryType: "single-node"
-
   image:
     repository: "docker.elastic.co/elasticsearch/elasticsearch"
     tag: "8.15.0"
-
   port: 9200
   heap: "512m"
-
   # Secret name used by the app and ES
   secretName: "elasticsearch-credentials"
-
   # Persistence (PVC)
   persistence: true
-  storageClass: ""            # leave empty to use default StorageClass
+  storageClass: "" # leave empty to use default StorageClass
   storageSize: "10Gi"
-
   # Basic credentials (only for dev/testing)
   username: "elastic"
   password: "password"
-
   # Cluster settings
   clusterName: "city-population-cluster"
-
   resources:
     requests:
       memory: "1Gi"
@@ -55,7 +46,6 @@ elasticsearch:
     limits:
       memory: "2Gi"
       cpu: "1"
-
 # ==========================================
 # NAMESPACE
 # ==========================================
