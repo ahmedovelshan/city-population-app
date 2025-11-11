@@ -10,13 +10,11 @@ ES_USER = os.environ.get("ELASTICSEARCH_USERNAME", "elastic")
 ES_PASS = os.environ.get("ELASTICSEARCH_PASSWORD", "password")
 
 # Connect to Elasticsearch
-es = Elasticsearch(
-    ES_HOST,
-    basic_auth=(ES_USER, ES_PASS)
-)
-
-if not es.ping():
-    raise Exception("Elasticsearch not reachable at startup")
+es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
+if es.ping():
+    print("Connected to Elasticsearch!")
+else:
+    print("Warning: Elasticsearch not reachable at startup. Init container should have waited for it.")
 
 INDEX_NAME = "cities"
 
