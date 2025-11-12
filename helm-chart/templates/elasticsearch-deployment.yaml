@@ -60,7 +60,11 @@ spec:
               command:
                 - sh
                 - -c
-                - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
+                - |
+                  until curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health; do
+                    echo "Waiting for Elasticsearch to be ready..."
+                    sleep 5
+                  done
             initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 10
@@ -71,7 +75,11 @@ spec:
               command:
                 - sh
                 - -c
-                - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
+                - |
+                  until curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health; do
+                    echo "Waiting for Elasticsearch to be ready..."
+                    sleep 5
+                  done
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
