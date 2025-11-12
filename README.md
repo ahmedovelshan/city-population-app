@@ -84,12 +84,6 @@ helm upgrade --install city-population ./helm-chart   --set namespace.name=defau
 ```
 Replace `<your-storage-class>` with a valid StorageClass in your cluster.
 
-#### Deploy with custom Elasticsearch credentials
-```bash
-helm upgrade --install city-population ./helm-chart   --set namespace.name=default   --set elasticsearch.persistence.enabled=true   --set elasticsearch.persistence.storageClass=<your-storage-class>   --set elasticsearch.persistence.size=10Gi   --set elasticsearch.username=<your-username>   --set elasticsearch.password=<your-password>
-```
-By default, it uses preconfigured credentials (`elastic` / `password`).
-
 ---
 
 ## Verify Deployment
