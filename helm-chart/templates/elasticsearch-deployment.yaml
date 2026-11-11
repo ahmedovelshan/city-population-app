@@ -25,7 +25,6 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
-            # ES needs write access to data dir; keep root fs writable
             readOnlyRootFilesystem: false
             capabilities:
               drop:
@@ -36,7 +35,6 @@ spec:
             {{- toYaml .Values.elasticsearch.resources | nindent 12 }}
 
           env:
-            # Keep environment variable names valid (no dots)
             - name: ES_JAVA_OPTS
               value: "-Xms{{ .Values.elasticsearch.heap }} -Xmx{{ .Values.elasticsearch.heap }}"
             - name: ELASTIC_PASSWORD
@@ -44,7 +42,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.elasticsearch.secretName }}
                   key: password
-            # If you want to expose username too:
             - name: ELASTIC_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -87,7 +84,6 @@ spec:
               mountPath: /usr/share/elasticsearch/config/jvm.options.d/heap.options
               subPath: jvm.options
 
-      # Always include the configmap volumes so mounts exist regardless of persistence
       volumes:
         - name: elasticsearch-config
           configMap:
@@ -101,22 +97,21 @@ spec:
             items:
               - key: jvm.options
                 path: jvm.options
-      {{- if not .Values.elasticsearch.persistence }}
-        # when persistence is disabled use emptyDir for data
+      {{- if not .Values.elasticsearch.persistence.enabled }}
         - name: elasticsearch-data
           emptyDir: {}
       {{- end }}
 
-  {{if .Values.elasticsearch.persistence.enabled }}
+  {{- if .Values.elasticsearch.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
       spec:
         accessModes: ["ReadWriteOnce"]
         {{- if .Values.elasticsearch.persistence.storageClass }}
-        storageClassName: {{ .Values.elasticsearch.persistence.storageClass }}
+        storageClassName: {{ .Values.elasticsearch.persistence.storageClass | quote }}
         {{- end }}
         resources:
           requests:
-            storage: {{ .Values.elasticsearch.persistence.size | default "10Gi" }}
+            storage: {{ .Values.elasticsearch.persistence.size | default "10Gi" | quote }}
   {{- end }}

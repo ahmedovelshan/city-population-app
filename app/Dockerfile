@@ -1,50 +1,22 @@
-# -----------------------------
-# Stage 1: Build stage
-# -----------------------------
-FROM python:3.11-slim AS builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install dependencies
-COPY requirements.txt .
-# Install dependencies globally in builder
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY app.py .
-
-# -----------------------------
-# Stage 2: Runtime stage
-# -----------------------------
 FROM python:3.11-slim
 
-# Add non-root user
-RUN useradd --create-home --shell /bin/bash appuser
-USER appuser
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=5000
+
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin appuser
 
 WORKDIR /app
 
-# Environment settings
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    FLASK_ENV=production \
-    PATH=/home/appuser/.local/bin:$PATH \
-    PYTHONPATH=/app/.local/lib/python3.11/site-packages:$PYTHONPATH \
-    PORT=5000
+COPY requirements.txt .
+RUN pip install --no-cache-dir --disable-pip-version-check -r requirements.txt
 
-# Copy dependencies from builder
-COPY --from=builder /install /home/appuser/.local
-# Copy app code
-COPY --from=builder /app /app
+COPY --chown=1000:1000 app.py .
 
-# Expose Flask port
-EXPOSE $PORT
+USER 1000:1000
 
-# Start the Flask app
-CMD ["python", "app.py"]
+EXPOSE 5000
+
+# Initialize Elasticsearch once, then run a production WSGI server.
+CMD ["sh", "-c", "python -c 'import app; app.initialize()' && exec gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 4 --timeout 30 --access-logfile - --error-logfile - app:app"]
