@@ -55,13 +55,22 @@ spec:
             - containerPort: {{ .Values.elasticsearch.port }}
               name: http
 
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 60
+
           readinessProbe:
             exec:
               command:
                 - sh
                 - -c
                 - "curl -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD -fsSL http://localhost:9200/_cluster/health"
-            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 3
