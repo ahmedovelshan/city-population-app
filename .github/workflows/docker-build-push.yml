@@ -1,73 +1,101 @@
-name: Build, Push Docker Image & Update App Version
+name: Test, Build and Publish Docker Image
 
 on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "helm-chart/**"
+      - ".github/workflows/**"
   push:
+    branches:
+      - main
     paths:
       - "app/**"
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Python dependencies
+        run: python -m pip install --disable-pip-version-check -r app/requirements.txt
+
+      - name: Run unit tests
+        run: PYTHONPATH=app python -m unittest discover -s app/tests -v
+
+      - name: Compile Python sources
+        run: python -m compileall -q app
+
+  build-and-push:
+    name: Build and publish image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
-
     steps:
-      # 1️⃣ Checkout the repo
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # 2️⃣ Set Git SHA as image tag
-      - name: Set image tag from Git SHA
-        id: vars
-        run: echo "IMAGE_TAG=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
+      - name: Log in to GitHub Container Registry
+        env:
+          REGISTRY_USERNAME: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$REGISTRY_PASSWORD" | docker login ghcr.io --username "$REGISTRY_USERNAME" --password-stdin
 
-      # 3️⃣ Log in to GitHub Container Registry
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # 4️⃣ Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 5️⃣ Build and push Docker image
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./app
-          push: true
-          tags: |
-            ghcr.io/ahmedovelshan/city-population-app:${{ env.IMAGE_TAG }}
-            ghcr.io/ahmedovelshan/city-population-app:latest
-          cache-from: type=registry,ref=ghcr.io/ahmedovelshan/city-population-app:cache
-          cache-to: type=registry,ref=ghcr.io/ahmedovelshan/city-population-app:cache,mode=max
-
-      # 6️⃣ Update values.yaml with new image tag
-      - name: Update values.yaml with new image tag
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          TAG=${{ env.IMAGE_TAG }}
-          yq e -i ".app.image.tag = \"$TAG\"" helm-chart/values.yaml
+          docker buildx create --name city-population-builder --use
+          docker buildx inspect --bootstrap
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --tag "ghcr.io/ahmedovelshan/city-population-app:$IMAGE_TAG" \
+            --tag "ghcr.io/ahmedovelshan/city-population-app:latest" \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            ./app
 
-      # 7️⃣ Increment appVersion in Chart.yaml
-      - name: Increment appVersion in Chart.yaml
+      - name: Update Helm chart image version
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          CURRENT_VERSION=$(yq e '.appVersion' helm-chart/Chart.yaml)
-          # Remove 'v' prefix and increment
-          NUM=$(( ${CURRENT_VERSION#v} + 1 ))
-          NEW_VERSION="v$NUM"
-          echo "Updating appVersion from $CURRENT_VERSION to $NEW_VERSION"
-          yq e -i ".appVersion = \"$NEW_VERSION\"" helm-chart/Chart.yaml
+          TAG="${IMAGE_TAG:0:7}"
+          sed -i -E "s/^    tag: .*/    tag: \"$TAG\"/" helm-chart/values.yaml
+          python - "$TAG" <<'PY'
+          import pathlib
+          import re
+          import sys
 
-      # 8️⃣ Commit updated files back to repo
-      - name: Commit and push changes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          chart = pathlib.Path("helm-chart/Chart.yaml")
+          content = chart.read_text()
+          content, count = re.subn(
+              r"(?m)^appVersion:.*$",
+              f'appVersion: "{sys.argv[1]}"',
+              content,
+          )
+          if count != 1:
+              raise SystemExit("Expected exactly one appVersion entry in Chart.yaml")
+          chart.write_text(content)
+          PY
+
+          git diff --check
+          if git diff --quiet; then
+            echo "Helm chart already references this image."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add helm-chart/values.yaml helm-chart/Chart.yaml
-          git commit -m "Update app image tag to ${{ env.IMAGE_TAG }} and appVersion"
-          git push
+          git commit -m "chore: update app image to $TAG [skip ci]"
+          git push origin HEAD:main

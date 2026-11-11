@@ -1,161 +1,121 @@
 # City Population App
 
-A containerized Python Flask application that manages city population data, exposes REST API endpoints, and stores data in Elasticsearch. The app and Elasticsearch are deployable together on Kubernetes via a Helm chart.
-
----
+A containerized Flask REST API for city population data, backed by Elasticsearch and deployable to Kubernetes with Helm.
 
 ## Features
 
-- REST API endpoints:  
-  - **Health Check**: `GET /health` → returns `OK`  
-  - **Upsert City**: `POST /city` → insert or update city population  
-  - **Query City**: `GET /city/<city_name>` → get population of a city  
-- Stores all data in Elasticsearch  
-- Containerized with Docker  
-- Deployable with Helm on Kubernetes  
-- Automated Docker image build & push via GitHub Actions  
+- `GET /live`: process liveness check (does not depend on Elasticsearch).
+- `GET /health`: readiness check (requires Elasticsearch).
+- `POST /city`: insert or update a city and its population.
+- `GET /city/<city_name>`: retrieve a city's population.
+- Non-root Docker image and production Gunicorn WSGI server.
+- Helm deployment with optional Elasticsearch persistent storage.
+- GitHub Actions unit tests and GHCR image publishing.
 
----
+## Project structure
 
-## Project Structure
-
-```
-city-population-app/
-├── README.md
+```text
+.
+├── .github/workflows/docker-build-push.yml
 ├── app
-│ ├── Dockerfile
-│ ├── app.py
-│ └── requirements.txt
+│   ├── Dockerfile
+│   ├── app.py
+│   ├── requirements.txt
+│   └── tests/test_app.py
 └── helm-chart
     ├── Chart.yaml
-    ├── templates
-    │ ├── app-deployment.yaml
-    │ ├── app-service.yaml
-    │ ├── elasticsearch-configmap.yaml
-    │ ├── elasticsearch-deployment.yaml
-    │ ├── elasticsearch-networkpolicy.yaml
-    │ ├── elasticsearch-service.yaml
-    │ ├── namespace.yaml
-    │ └── secret.yaml
-    └── values.yaml
+    ├── values.yaml
+    └── templates/
 ```
 
----
+## Run tests locally
 
-## Prerequisites
+Python 3.11 or newer is recommended.
 
-- Kubernetes cluster (local: Minikube / kind / remote cluster) 
-- kubectl
-- git 
-- Helm 3  
-- GitHub repository with GHCR enabled  
-
----
-
-## Build and Push Docker Image
-
-GitHub Actions automatically builds and pushes the Docker image to GHCR whenever changes occur in the following:
-
-```
-app/**
+```bash
+python -m pip install -r app/requirements.txt
+PYTHONPATH=app python -m unittest discover -s app/tests -v
 ```
 
----
+The tests mock Elasticsearch and do not require a running cluster.
+
+## Build the Docker image
+
+Run from the repository root:
+
+```bash
+docker build -t city-population-app:local ./app
+```
+
+The container waits for Elasticsearch, creates the index if needed, seeds the example cities, and then starts Gunicorn. Set `ELASTICSEARCH_URL`, `ELASTICSEARCH_USERNAME`, and `ELASTICSEARCH_PASSWORD` when running it outside Kubernetes.
 
 ## Deploy to Kubernetes with Helm
 
-1. Clone the repository:  
-```bash
-git clone https://github.com/ahmedovelshan/city-population-app.git
-cd city-population-app
-```
+Prerequisites: Kubernetes, kubectl, Helm 3, and a cluster with sufficient resources for Elasticsearch.
 
-2. ### Deploying the Application
-
-#### Deploy without persistence (default)
-```bash
-helm upgrade --install city-population ./helm-chart   --set namespace.name=default   --set elasticsearch.persistence=false
-```
-Data will not persist if pods are restarted.
-
-#### Deploy with persistent storage (using StorageClass)
-```bash
-helm upgrade --install city-population ./helm-chart   --set namespace.name=default   --set elasticsearch.persistence.enabled=true   --set elasticsearch.persistence.storageClass=<your-storage-class>   --set elasticsearch.persistence.size=10Gi
-```
-Replace `<your-storage-class>` with a valid StorageClass in your cluster.
-
----
-
-## Verify Deployment
+Create a password file outside the repository. Do not commit credentials:
 
 ```bash
-kubectl get pods
-kubectl get svc
+umask 077
+read -rsp "Elasticsearch password: " ES_PASSWORD
+printf '%s' "$ES_PASSWORD" > /tmp/city-population-es-password
+unset ES_PASSWORD
 ```
 
----
+Install without persistent storage (the default; Elasticsearch data is lost when its pod is recreated):
 
-## Testing Inside Kubernetes
-
-Start a debug pod:
 ```bash
-kubectl run -it debug --image=curlimages/curl --restart=Never -- sh
+helm upgrade --install city-population ./helm-chart \
+  --namespace city-population-app --create-namespace \
+  --set-file elasticsearch.password=/tmp/city-population-es-password
 ```
 
-Run the API requests inside the debug pod:
+For persistent Elasticsearch data, provide a StorageClass available in your cluster:
+
 ```bash
-curl http://city-populations:5000/health
-curl http://city-populations:5000/city/London
-curl -X POST http://city-populations:5000/city   -H "Content-Type: application/json"   -d '{"city": "Rome", "population": 2873000}'
-curl http://city-populations:5000/city/Rome
+helm upgrade --install city-population ./helm-chart \
+  --namespace city-population-app --create-namespace \
+  --set-file elasticsearch.password=/tmp/city-population-es-password \
+  --set elasticsearch.persistence.enabled=true \
+  --set elasticsearch.persistence.storageClass=YOUR_STORAGE_CLASS \
+  --set elasticsearch.persistence.size=10Gi
 ```
 
----
+Remove the temporary password file after installation:
 
-## Application Flow Diagram
-
+```bash
+rm -f /tmp/city-population-es-password
 ```
-+-------------------+        +------------------+
-|                   |        |                  |
-|   Flask App Pod   | -----> | Elasticsearch Pod|
-|                   |        |                  |
-+-------------------+        +------------------+
-           ^                          ^
-           |                          |
-           +------ Kubernetes Service -+
+
+The chart intentionally requires an Elasticsearch password and does not ship with a default credential. For production, use an external secret manager and enable TLS for Elasticsearch traffic.
+
+Check the deployment:
+
+```bash
+kubectl get pods -n city-population-app
+kubectl get services -n city-population-app
+kubectl port-forward -n city-population-app service/city-populations 5000:5000
 ```
-- Flask app communicates with Elasticsearch via the Kubernetes service `elasticsearch:9200`.  
-- The Helm chart deploys both pods and services together.
 
----
+## API examples
 
-## Helm Chart Notes
+```bash
+curl http://127.0.0.1:5000/live
+curl http://127.0.0.1:5000/health
+curl -X POST http://127.0.0.1:5000/city \
+  -H "Content-Type: application/json" \
+  -d '{"city":"Rome","population":2873000}'
+curl http://127.0.0.1:5000/city/Rome
+```
 
-- Flask app connects automatically to Elasticsearch via Kubernetes service: `http://elasticsearch:9200`  
+Population must be a non-negative 64-bit integer. City names must be non-empty strings of at most 100 characters.
 
----
+## CI/CD
 
-## Reflection
+Pull requests that modify the application or Helm chart run the Python unit tests and compile check. Pushes to `main` that modify `app/**` run the tests, build the Docker image, and publish immutable commit-SHA and `latest` tags to GHCR. The workflow then updates the Helm chart's image tag and app version.
 
-### Challenges Faced
-- Ensuring proper connection between the Flask app and Elasticsearch inside Kubernetes.  
-- Managing Elasticsearch credentials securely within Helm values and secrets.  
-- Handling Elasticsearch readiness and ensuring the app waits until the database is available.  
-- Designing a Helm chart flexible enough to support both ephemeral and persistent deployments.  
-
-### Suggestions for Production Scaling
-- **High Availability (HA)**: Deploy Elasticsearch as a multi-node cluster using StatefulSets with persistent volumes.  
-- **Observability**: Integrate Prometheus and Grafana to monitor application and Elasticsearch performance metrics.  
-- **Security Hardening**:  
-  - Use Kubernetes Secrets for storing credentials and enable SSL/TLS for communication between services.  
-  - Restrict access to Elasticsearch using NetworkPolicies.  
-- **Scalability**:  
-  - Use Horizontal Pod Autoscaler (HPA) for the Flask app.  
-  - Optimize Elasticsearch with appropriate resource requests/limits and shard/replica configurations.  
-- **CI/CD Automation**: Integrate Helm deployments with GitHub Actions for automated versioned releases.
-
----
+The GitHub Actions workflow uses read-only permissions by default and grants package/content write permissions only to the publishing job.
 
 ## License
 
-MIT License
+MIT

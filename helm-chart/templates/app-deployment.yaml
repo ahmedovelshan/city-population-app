@@ -14,21 +14,25 @@ spec:
       labels:
         app: {{ .Values.app.name }}
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
 
-      # Init container: wait for Elasticsearch to be ready
       initContainers:
         - name: wait-for-elasticsearch
-          image: curlimages/curl:8.2.1
+          image: curlimages/curl:8.12.1
           command:
             - sh
             - -c
             - |
               echo "Waiting for Elasticsearch at ${ELASTICSEARCH_URL}..."
               for i in $(seq 1 25); do
-                if curl -u $ELASTICSEARCH_USERNAME:$ELASTICSEARCH_PASSWORD -fsSL "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; then
+                if curl --fail --silent --show-error \
+                  --user "${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}" \
+                  "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status"'; then
                   echo "Elasticsearch is ready!"
                   exit 0
                 fi
@@ -84,6 +88,16 @@ spec:
                   key: password
           ports:
             - containerPort: {{ .Values.app.port }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /live
+              port: {{ .Values.app.port }}
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /health
@@ -91,13 +105,19 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /health
+              path: /live
               port: {{ .Values.app.port }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 0
             periodSeconds: 15
-            failureThreshold: 3
             timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.app.resources | nindent 12 }}
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
