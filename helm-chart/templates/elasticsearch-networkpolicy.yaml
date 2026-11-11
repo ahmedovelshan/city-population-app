@@ -10,7 +10,6 @@ spec:
       app: {{ .Values.elasticsearch.name }}
   policyTypes:
     - Ingress
-    - Egress
   ingress:
     - from:
         - podSelector:
@@ -19,11 +18,3 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.elasticsearch.port }}
-  egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app: {{ .Values.app.name }}
-      ports:
-        - protocol: TCP
-          port: {{ .Values.app.port }}
