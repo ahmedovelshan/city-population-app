@@ -14,9 +14,12 @@ spec:
       labels:
         app: {{ .Values.app.name }}
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
 
       initContainers:
         - name: wait-for-elasticsearch
@@ -85,6 +88,9 @@ spec:
                   key: password
           ports:
             - containerPort: {{ .Values.app.port }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             httpGet:
               path: /health
@@ -103,3 +109,8 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.app.resources | nindent 12 }}
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
